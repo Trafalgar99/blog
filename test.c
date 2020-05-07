@@ -4,15 +4,13 @@
 
 int main()
 {
-    char words[MAXLENGTH] = "I　am　a　string　in　an　array";
-    const char *pt1 = "Something is pointing at me.";
-    puts("Here　are　some　strings:");
-    puts(MSG);
-    puts(words);
-    puts(pt1);
-    words[8] = 'p';
-    puts(words);
-    printf("%s, %p, %c\n", "We", "are", *"space farers");
+    char *p1 = "Klingon";
+    
+    printf("Kligon");
+    printf(": Beware the %ss!\n", "Klingon");
+
+    gets_s(p1,5);
+    fgets(p1, 5, stdin);
 
     return 0;
 }
