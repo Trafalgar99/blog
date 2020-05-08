@@ -137,3 +137,102 @@ linux中的文件类型：
 ## 文件的特殊权限
 > 在复杂多变的生产环境中，单纯设置文件的 rwx 权限无法满足我们对安全和灵活性的需求，因此便有了 SUID、SGID 与 SBIT 的特殊权限位。这是一种对文件权限进行设置的特殊功能，可以与一般权限同时使用，以弥补一般权限不能实现的功能
 
+**SUID**
+> SUID 是一种对二进制程序进行设置的特殊权限，可以让二进制程序的执行者临时拥有 属主的权限（仅对拥有执行权限的二进制程序有效）。
+
+例如，所有用户都可以执行 passwd 命 令来修改自己的用户密码，而用户密码保存在/etc/shadow 文件中。仔细查看这个文件就会发 现它的默认权限是 000，也就是说除了 root 管理员以外，所有用户都没有查看或编辑该文件 的权限。但是，在使用 passwd 命令时如果加上 SUID 特殊权限位，就可让普通用户临时获得 程序所有者的身份，把变更的密码信息写入到 shadow 文件中。
+
+查看 passwd 命令属性时发现所有者的权限由 rwx 变成了 rws，其中 x 改变成 s 就意味着 该文件被赋予了 SUID 权限
+
+如果原先权 限位上没有 x 执行权限，那么被赋予特殊权限后将变成大写的 S
+
+
+**SGID**
+> SGID 主要实现如下两种功能： 
+> 
+> + 让执行者临时拥有属组的权限（对拥有执行权限的二进制程序进行设置）； 
+> + 在某个目录中创建的文件自动继承该目录的用户组（只可以对目录进行设置）。 
+
+每个文件都有其归属的所有者和所属组，当创建或传送一个文件后，这个文 件就会自动归属于执行这个操作的用户（即该用户是文件的所有者）。如果现在需要在一个部 门内设置共享目录，让部门内的所有人员都能够读取目录中的内容，那么就可以创建部门共 享目录后，在该目录上设置 SGID 特殊权限位。这样，部门内的任何人员在里面创建的任何文 件都会归属于该目录的所属组，而不再是自己的基本用户组。此时，我们用到的就是 SGID 的 第二个功能，即在某个目录中创建的文件自动继承该目录的用户组（只可以对目录进行设置）。
+
+```shell
+[root@linuxprobe ~]# cd /tmp [root@linuxprobe tmp]# mkdir testdir [root@linuxprobe tmp]# ls -ald testdir/ drwxr-xr-x. 2 root root 6 Feb 11 11:50 testdir/ [root@linuxprobe tmp]# chmod -Rf 777 testdir/ [root@linuxprobe tmp]# chmod -Rf g+s testdir/ [root@linuxprobe tmp]# ls -ald testdir/ drwxrwsrwx. 2 root root 6 Feb 11 11:50 testdir/ 
+在使用上述命令设置好目录的 777 权限（确保普通用户可以向其中写入文件），并为该目 录设置了 SGID 特殊权限位后，就可以切换至一个普通用户，然后尝试在该目录中创建文件， 并查看新创建的文件是否会继承新创建的文件所在的目录的所属组名称： 
+[root@linuxprobe tmp]# su - linuxprobe Last login: Wed Feb 11 11:49:16 CST 2017 on pts/0 [linuxprobe@linuxprobe ~]$ cd /tmp/testdir/ [linuxprobe@linuxprobe testdir]$ echo "linuxprobe.com" > test [linuxprobe@linuxprobe testdir]$ ls -al test -rw-rw-r--. 1 linuxprobe root 15 Feb 11 11:50 test 
+```
+
+**chmod和chown**
+
+chmod 命令是一个非常实用的命令，能够用来设置文件或目录的权限，格式为“chmod [参数] 权限 文件或目录名称”。如果要把一个文件的权限设置成其所有者可读可写可执行、 所属组可读可写、其他人没有任何权限，则相应的字符法表示为 rwxrw----，其对应的数字法 表示为 760。
+
+除了设置文件或目录的权限外，还可以设置文件或目录的所有者和所属组，这里使用的 命令为 chown，其格式为“chown [参数] 所有者:所属组 文件或目录名称”。 
+
+chmod 和 chown 命令是用于修改文件属性和权限的最常用命令，它们还有一个特别的共 性，就是针对目录进行操作时需要加上大写参数-R 来表示递归操作，即对目录内所有的文件 进行整体操作
+
+**SBIT**
+> SBIT 特殊权限位可确保用户只能删除自己的文件，而 不能删除其他用户的文件。换句话说，当对某个目录设置了 SBIT 粘滞位权限后，那么该目录 中的文件就只能被其所有者执行删除操作了。
+
+与前面所讲的 SUID 和 SGID 权限显示方法不同，当目录被设置 SBIT 特殊权限位后，文 件的其他人权限部分的 x 执行权限就会被替换成 t 或者 T，原本有 x 执行权限则会写成 t，原 本没有 x 执行权限则会被写成 T。 
+
+要是也想对其他目录来设置 SBIT 特殊权限位，用 chmod 命令就可以了。对应的 参数 o+t 代表设置 SBIT 粘滞位权限： 
+
+--------------------------------
+
+## 文件的隐藏属性
+
+> Linux 系统中的文件除了具备一般权限和特殊权限之外，还有一种隐藏权限，即被隐藏起 来的权限，默认情况下不能直接被用户发觉
+
+**chattr**
+chattr 命令用于设置文件的隐藏权限，格式为“chattr [参数] 文件”。如果想要把某个隐藏 功能添加到文件上，则需要在命令后面追加“+参数”，如果想要把某个隐藏功能移出文件， 则需要追加“-参数”
+![](image/2020-05-08-16-19-56.png)
+![](image/2020-05-08-16-20-26.png)
+
+```shell
+[root@linuxprobe ~]# echo "for Test" > linuxprobe [root@linuxprobe ~]# chattr +a linuxprobe [root@linuxprobe ~]# rm linuxprobe rm: remove regular file ‘linuxprobe’? y rm: cannot remove ‘linuxprobe’: Operation not permitted 
+```
+
+**lsattr**
+lsattr 命令用于显示文件的隐藏权限，格式为“lsattr [参数] 文件”。在 Linux 系统中，文 件的隐藏权限必须使用 lsattr 命令来查看，平时使用的 ls 之类的命令则看不出端倪
+
+------------------------------------
+
+## 文件访问控制列表
+> 如果希望对某个指定的用户进行单独的权限控制，就需要用到文件 的访问控制列表（ACL）了。通俗来讲，基于普通文件或目录设置 ACL 其实就是针对指定的 用户或用户组设置文件或目录的操作权限。另外，如果针对某个目录设置了 ACL，则目录中 的文件会继承其 ACL；若针对文件设置了 ACL，则文件不再继承其所在目录的 ACL。
+
+
+**setfacl**
+> setfacl 命令用于管理文件的 ACL 规则，格式为“setfacl [参数] 文件名称”。文件的 ACL 提供的是在所有者、所属组、其他人的读/写/执行权限之外的特殊权限控制，使用 setfacl 命令 可以针对单一用户或用户组、单一文件或目录来进行读/写/执行权限的控制。其中，针对目录 文件需要使用-R 递归参数；针对普通文件则使用-m 参数；如果想要删除某个文件的 ACL， 则可以使用-b 参数
+
+```shell
+[root@linuxprobe ~]# setfacl -Rm u:linuxprobe:rwx /root [root@linuxprobe ~]# su - linuxprobe Last login: Sat Mar 21 15:45:03 CST 2017 on pts/1 [linuxprobe@linuxprobe ~]$ cd /root [linuxprobe@linuxprobe root]$ ls anaconda-ks.cfg Downloads Pictures Public [linuxprobe@linuxprobe root]$ cat anaconda-ks.cfg [linuxprobe@linuxprobe root]$ exit
+```
+
+常用的 ls 命令是看不到 ACL 表信息的，但是却可以看到文件的权限最后一个点（.）变 成了加号（+）,这就意味着该文件已经设置了 ACL 了。
+
+**getfacl**
+> getfacl 命令用于显示文件上设置的 ACL 信息，格式为“getfacl 文件名称”。
+
+------------------------------
+
+## su命令与sudo服务
+
+> su 命令可以解决切换用户身份的需求，使得当前用户在不退出登录的情况下，顺畅地切 换到其他用户，比如从 root 管理员切换至普通用户
+
+su 命令与用户名之间有一个减号（-）这意味着完全切 换到新的用户，即把环境变量信息也变更为新用户的相应信息，而不是保留原始的信息。强 烈建议在切换用户身份时添加这个减号（-）。
+
+
+sudo 命令用于给普通用户提供额外的权限来完成原本 root 管理员才能完成的任务，格式 为“sudo [参数] 命令名称”。
+
+![](image/2020-05-08-16-33-06.png)
+
+总结来说，sudo 命令具有如下功能： 
++ 限制用户执行指定的命令：
++ 记录用户执行的每一条命令； 
++ 配置文件（/etc/sudoers）提供集中的用户管理、权限与主机等参数； 
++ 验证密码的后 5 分钟内（默认值）无须再让用户再次验证密码。 
+
+当然，如果担心直接修改配置文件会出现问题，则可以使用 sudo 命令提供的 visudo 命令 来配置用户权限。这条命令在配置用户权限时将禁止多个用户同时修改 sudoers 配置文件，还 可以对配置文件内的参数进行语法检查，并在发现参数错误时进行报错(仅root可用)
+
+
+-------------------------------------
+> 感谢刘遄老师提供的开源优秀教材《Linux就该这么学》www.linuxprobe.com 
