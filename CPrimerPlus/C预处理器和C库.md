@@ -654,8 +654,7 @@ printf("This is line %d.\n", __LINE__);
 #error Not C11
 #endif
 ```
-
-# #pragma
+**#pragma**
 
 在现在的编译器中，可以通过命令行参数或IDE菜单修改编译器的一些 设置。#pragma把编译器指令放入源代码中。例如，在开发C99时，标准被 称为C9X，可以使用下面的编译指示（pragma）让编译器支持C9X：
 
@@ -696,3 +695,580 @@ _Pragma("use_bool \"true \"false")
 ```C
 #pragma use_bool "true "false
 ```
+
+**泛型选择C11**
+
+在程序设计中，泛型编程（generic programming）指那些没有特定类 型，但是一旦指定一种类型，就可以转换成指定类型的代码。例如，C++在 模板中可以创建泛型算法，然后编译器根据指定的类型自动使用实例化代 码。C没有这种功能。然而，C11新增了一种表达式，叫作泛型选择表达式 （generic selection expression），可根据表达式的类型（即表达式的类型是 int、double 还是其他类型）选择一个值。泛型选择表达式不是预处理器指 令，但是在一些泛型编程中它常用作#define宏定义的一部分。
+
+下面是一个泛型选择表达式的示例：
+```C
+_Generic(x, int: 0, float: 1, double: 2, default: 3)
+```
+_Generic是C11的关键字。_Generic后面的圆括号中包含多个用逗号分隔 的项。第1个项是一个表达式，后面的每个项都由一个类型、一个冒号和一 个值组成，如float: 1。第1个项的类型匹配哪个标签，整个表达式的值是该 标签后面的值。例如，假设上面表达式中x是int类型的变量，x的类型匹配 int:标签，那么整个表达式的值就是0。如果没有与类型匹配的标签，表达式 的值就是default:标签后面的值。泛型选择语句与 switch 语句类似，只是前 者用表达式的类型匹配标签，而后者用表达式的值匹配标签。
+
+下面是一个把泛型选择语句和宏定义组合的例子：
+```C
+#define MYTYPE(X) _Generic((X),\
+int: "int",\
+float : "float",\
+double: "double",\
+default: "other"\
+)
+```
+
+宏必须定义为一条逻辑行，但是可以用\把一条逻辑行分隔成多条物理 行。在这种情况下，对泛型选择表达式求值得字符串。例如，对 MYTYPE(5)求值得"int"，因为值5的类型与int:标签匹配。
+
+```C
+// mytype.c
+#include <stdio.h>
+#define MYTYPE(X) _Generic((X),\
+int: "int",\
+float : "float",\
+double: "double",\
+default: "other"\
+)
+int main(void)
+{
+int d = 5;
+printf("%s\n", MYTYPE(d));　　　// d 是int类型
+printf("%s\n", MYTYPE(2.0*d)); // 2.0 * d 是double类型
+printf("%s\n", MYTYPE(3L));　　 // 3L 是long类型
+printf("%s\n", MYTYPE(&d));　　// &d 的类型是 int *
+return 0;
+}
+```
+
+对一个泛型选择表达式求值时，程序不会先对第一个项求值，它只确定 类型。只有匹配标签的类型后才会对表达式求值。
+
+可以像使用独立类型（“泛型”）函数那样使用_Generic 定义宏。
+
+---------------------------------
+
+## 内联函数
+
+通常，函数调用都有一定的开销，因为函数的调用过程包括建立调用、 传递参数、跳转到函数代码并返回。使用宏使代码内联，可以避免这样的开 销。C99还提供另一种方法：内联函数（inline function）。读者可能顾名思 义地认为内联函数会用内联代码替换函数调用。其实C99和C11标准中叙述 的是：“把函数变成内联函数建议尽可能快地调用该函数，其具体效果由实 现定义”。因此，把函数变成内联函数，编译器可能会用内联代码替换函数 调用，并（或）执行一些其他的优化，但是也可能不起作用。
+
+创建内联函数的定义有多种方法。标准规定具有内部链接的函数可以成 为内联函数，还规定了内联函数的定义与调用该函数的代码必须在同一个文 件中。因此，最简单的方法是使用函数说明符 inline 和存储类别说明符 static。通常，内联函数应定义在首次使用它的文件中，所以内联函数也相 当于函数原型。
+```C
+#include <stdio.h>
+inline static void eatline()　 // 内联函数定义/原型
+{
+while (getchar() != '\n')
+continue;
+}
+int main()
+{
+...
+eatline();　　　　　　 // 函数调用
+...
+}
+```
+编译器查看内联函数的定义（也是原型），可能会用函数体中的代码替 换 eatline()函数调用。也就是说，效果相当于在函数调用的位置输入函数体 中的代码：
+```C
+#include <stdio.h>
+inline static void eatline() //内联函数定义/原型
+{
+while (getchar() != '\n')
+continue;
+}
+int main()
+{
+...
+while (getchar() != '\n') //替换函数调用
+continue;
+...
+}
+```
+
+由于并未给内联函数预留单独的代码块，所以无法获得内联函数的地址（实际上可以获得地址，不过这样做之后，编译器会生成一个非内联函 数）。另外，内联函数无法在调试器中显示。
+
+内联函数应该比较短小。把较长的函数变成内联并未节约多少时间，因 为执行函数体的时间比调用函数的时间长得多。
+
+编译器优化内联函数必须知道该函数定义的内容。这意味着内联函数定 义与函数调用必须在同一个文件中。鉴于此，一般情况下内联函数都具有内 部链接。因此，如果程序有多个文件都要使用某个内联函数，那么这些文件 中都必须包含该内联函数的定义。最简单的做法是，把内联函数定义放入头 文件，并在使用该内联函数的文件中包含该头文件即可。
+
+```C
+// eatline.h
+#ifndef EATLINE_H_
+#define EATLINE_H_
+inline static void eatline()
+{
+while (getchar() != '\n')
+continue;
+}
+#endif
+```
+一般都不在头文件中放置可执行代码，内联函数是个特例。因为内联函 数具有内部链接，所以在多个文件中定义同一个内联函数不会产生什么问 题。
+
+与C++不同的是，C还允许混合使用内联函数定义和外部函数定义（具有外部链接的函数定义）。
+```C
+//file1.c
+...
+inline static double square(double);
+double square(double x) { return x * x; }
+int main()
+{
+double q = square(1.3);
+...
+//file2.c
+...
+double square(double x) { return (int) (x*x); }
+void spam(double v)
+{
+double kv = square(v);
+...
+//file3.c
+...
+inline double square(double x) { return (int) (x * x + 0.5); }
+void masp(double w)
+{
+double kw = square(w);
+...
+```
+
+3个文件中都定义了square()函数。file1.c文件中是 inline static定义；file2.c 文件中是普通的函数定义（因此具有外部链接）； file3.c 文件中是 inline 定义，省略了static。
+
+3个文件中的函数都调用了square()函数，这会发生什么情况？。file1.c 文件中的main()使用square()的局部static定义。由于该定义也是inline定义， 所以编译器有可能优化代码，也许会内联该函数。file2.c 文件中，spam()函 数使用该文件中 square()函数的定义，该定义具有外部链接，其他文件也可 见。file3.c文件中，编译器既可以使用该文件中square()函数的内联定义，也 可以使用file2.c文件中的外部链接定义。如果像file3.c那样，省略file1.c文件 inline定义中的static，那么该inline定义被视为可替换的外部定义。
+
+-----------------------------------
+
+## _Noreturn函数(C11)
+
+C99新增inline关键字时，它是唯一的函数说明符（关键字extern和static 是存储类别说明符，可应用于数据对象和函数）。C11新增了第2个函数说 明符_Noreturn，表明调用完成后函数不返回主调函数。exit()函数是 _Noreturn 函数的一个示例，一旦调用exit()，它不会再返回主调函数。注 意，这与void返回类型不同。void类型的函数在执行完毕后返回主调函数， 只是它不提供返回值。
+
+_Noreturn的目的是告诉用户和编译器，这个特殊的函数不会把控制返回 主调程序。告诉用户以免滥用该函数，通知编译器可优化一些代码。
+
+-----------------------
+## C库
+
+最初，并没有官方的C库。后来，基于UNIX的C实现成为了标准。ANSI C委员会主要以这个标准为基础，开发了一个官方的标准库。在意识到C语 言的应用范围不断扩大后，该委员会重新定义了这个库，使之可以应用于其 他系统。
+
+**访问C库**
+
+不同的系统搜索这些函 数的方法不同。下面介绍3种可能的方法。
+ 1. 自动访问
+   
+在一些系统中，只需编译程序，就可使用一些常用的库函数。
+
+记住，在使用函数之前必须先声明函数的类型，通过包含合适的头文件 即可完成。在描述库函数的用户手册中，会指出使用某函数时应包含哪个头 文件。但是在一些旧系统上，可能必须自己输入函数声明。用户手册中指明了函数类型。
+
+2. 文件包含
+
+如果函数被定义为宏，那么可以通过#include 指令包含定义宏函数的文 件。通常，类似的宏都放在合适名称的头文件中。例如，许多系统（包括所有的ANSI C系统）都有ctype.h文件，该文件中包含了一些确定字符性质（如 大写、数字等）的宏。
+
+3. 库包含
+
+在编译或链接程序的某些阶段，可能需要指定库选项。即使在自动检查 标准库的系统中，也会有不常用的函数库。必须通过编译时选项显式指定这 些库。注意，这个过程与包含头文件不同。头文件提供函数声明或原型，而 库选项告诉系统到哪里查找函数代码。
+
+**使用库描述**
+
+阅读文档的关键是看懂函数头。许多内容随时间变化而变化。下面是旧 的UNIX文档中，关于fread()的描述：
+```C
+#include <stdio.h>
+fread(ptr, sizeof(*ptr), nitems, stream)
+FILE *stream;
+```
+首先，给出了应该包含的文件，但是没有给出fread()、ptr、sizeof(*ptr) 或nitems的类型。过去，默认类型都是int，但是从描述中可以看出ptr是一个 指针（在早期的C中，指针被作为整数处理）。参数stream声明为指向FILE的指针。上面的函数声明中的第2个参数看上去像是sizeof运算符，而实际上 这个参数的值应该是ptr所指向对象的大小。虽然用sizeof作为参数没什么问 题，但是用int类型的值作为参数更符合语法。
+
+后来，上面的描述变成了：
+
+```C
+#include <stdio.h>
+int fread(ptr, size, nitems, stream;)
+char *ptr;
+int size, nitems;
+FILE *stream;
+```
+
+ANSI C90标准提供了下面的描述：
+```C
+#include <stdio.h>
+size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+```
+
+首先，使用了新的函数原型格式。其次，改变了一些类型。size_t 类型 被定义为 sizeof 运算符的返回值类型——无符号整数类型，通常是unsigned int或unsigned long。stddef.h文件中包含了size_t类型的typedef或#define定义。 其他文件（包括stdio.h）通过包含stddef.h来包含这个定义。许多函数（包括 fread()）的实际参数中都要使用sizeof运算符，形式参数的size_t类型中正好 匹配这种常见的情况。
+
+C99/C11标准在以上的描述中加入了新的关键字restric：
+```C
+#include <stdio.h>
+size_t fread(void * restrict ptr, size_t size,size_t nmemb, FILE * restrict stream);
+```
+
+----------------------------
+## 数学库
+
+数学库中包含许多有用的数学函数。math.h头文件提供这些函数的原型。注意，函数中涉及的角度 都以弧度为单位（1 弧度=180/π=57.296 度）。
+![](image/2020-05-15-09-04-54.png)
+
+
+**tgmath.h库**
+
+C99标准提供的tgmath.h头文件中定义了泛型类型宏，如果在math.h中为一个函数定义了3种类型（float、double和long double）的版本，那么tgmath.h文件就创建一个泛型类型宏，与原来 double 版本的函数名同名。例如，根据提供的参数类型，定义 sqrt()宏展开为 sqrtf()、sqrt()或 sqrtl()函数。
+
+如果编译器支持复数运算，就会支持complex.h头文件，其中声明了与 复数运算相关的函数。例如，声明有 csqrtf()、csqrt()和 csqrtl()，这些函数 分别返回 float complex、double complex和long double complex类型的复数平 方根。如果提供这些支持，那么tgmath.h中的sqrt()宏也能展开为相应的复数 平方根函数。
+
+
+如果包含了tgmath.h，要调用sqrt()函数而不是sqrt()宏，可以用圆括号把被调用的函数名括起来：
+```C
+#include <tgmath.h>
+...
+float x = 44.0;
+double y;
+y = sqrt(x);　　　 // 调用宏，所以是 sqrtf(x)
+y = (sqrt)(x);　　// 调用函数 sqrt()
+```
+这样做没问题，因为类函数宏的名称必须用圆括号括起来。圆括号只会 影响操作顺序，不会影响括起来的表达式，所以这样做得到的仍然是函数调 用的结果。实际上，在讨论函数指针时提到过，由于C语言奇怪而矛盾的函 数指针规则，还也可以使用(*sqrt)()的形式来调用sqrt()函数。
+
+不借助C标准以外的机制，C11新增的_Generic表达式是实现tgmath.h最 简单的方式。
+
+---------------------------
+## 通用工具
+
+
+通用工具库包含各种函数，包括随机数生成器、查找和排序函数、转换 函数和内存管理函数。在ANSI C标准中，这些函数的原型都在stdlib.h头文件中。
+
+**exit()和atexit()**
+
+在 main()返回系统时将自动调用exit()函数。ANSI 标准还新增了一些不错的功 能，其中最重要的是可以指定在执行 exit()时调用的特定函数。atexit()函数 通过退出时注册被调用的函数提供这种功能，atexit()函数接受一个函数指针 作为参数。
+
+```C
+/* byebye.c -- atexit()示例 */
+#include <stdio.h>
+#include <stdlib.h>
+void sign_off(void);
+void too_bad(void);
+int main(void)
+{
+int n;
+atexit(sign_off);　　 /* 注册 sign_off()函数 */
+puts("Enter an integer:");
+if (scanf("%d", &n) != 1)
+{
+puts("That's no integer!");
+atexit(too_bad);　/* 注册 too_bad()函数 */
+exit(EXIT_FAILURE);
+}
+printf("%d is %s.\n", n, (n % 2 == 0) ? "even" : "odd");
+return 0;
+}
+void sign_off(void)
+{
+puts("Thus terminates another magnificent program from");
+puts("SeeSaw Software!");
+}
+void too_bad(void)
+{
+puts("SeeSaw Software extends its heartfelt condolences");
+puts("to you upon the failure of your program.");
+}
+```
+
+1. atexit()函数的用法
+
+这个函数使用函数指针。要使用 atexit()函数，只需把退出时要调用的函数地址传递给 atexit()即可。然后，atexit()注册函数列 表中的函数，当调用exit()时就会执行这些函数。ANSI保证，在这个列表中 至少可以放 32 个函数。最后调用 exit()函数时，exit()会执行这些函数（执 行顺序与列表中的函数顺序相反，即最后添加的函数最先执行）。
+
+atexit()注册的函数（如sign_off()和too_bad()）应该不带任何参数且返回 类型为void。通常，这些函数会执行一些清理任务，例如更新监视程序的文 件或重置环境变量。
+
+注意，即使没有显式调用exit()，还是会调用sign_off()，因为main()结束 时会隐式调用exit()。
+
+2. exit()函数的用法
+
+exit()执行完atexit()指定的函数后，会完成一些清理工作：刷新所有输出 流、关闭所有打开的流和关闭由标准I/O函数tmpfile()创建的临时文件。然后 exit()把控制权返回主机环境，如果可能的话，向主机环境报告终止状态。 通常，UNIX程序使用0表示成功终止，用非零值表示终止失败。UNIX返回 的代码并不适用于所有的系统，所以ANSI C为了可移植性的要求，定义了 一个名为EXIT_FAILURE的宏表示终止失败。类似地，ANSI C还定义了 EXIT_SUCCESS表示成功终止。不过，exit()函数也接受0表示成功终止。在 ANSI C中，在非递归的main()中使用exit()函数等价于使用关键字return。尽 管如此，在main()以外的函数中使用exit()也会终止整个程序。
+
+
+**qsort()函数**
+
+快速排序算法在C实现中的名称是qsort()。qsort()函数排序数组的数据 对象，其原型如下：
+```C
+void qsort(void *base, size_t nmemb, size_t size,int (*compar)(const void *, const void *));
+```
+第1个参数是指针，指向待排序数组的首元素。ANSI C允许把指向任何 数据类型的指针强制转换成指向void的指针，因此，qsort()的第1个实际参数 可以引用任何类型的数组。
+
+第2个参数是待排序项的数量。函数原型把该值转换为size_t类型。前面 提到过，size_t定义在标准头文件中，是sizeof运算符返回的整数类型。
+
+由于qsort()把第1个参数转换为void指针，所以qsort()不知道数组中每个 元素的大小。为此，函数原型用第 3 个参数补偿这一信息，显式指明待排序 数组中每个元素的大小。例如，如果排序 double类型的数组，那么第3个参 数应该是sizeof(double)。
+
+最后，qsort()还需要一个指向函数的指针，这个被指针指向的比较函数 用于确定排序的顺序。该函数应接受两个参数：分别指向待比较两项的指 针。如果第1项的值大于第2项，比较函数则返回正数；如果两项相同，则返 回0；如果第1项的值小于第2项，则返回负数。qsort()根据给定的其他信息 计算出两个指针的值，然后把它们传递给比较函数。
+
+```C
+/* qsorter.c -- 用 qsort()排序一组数字 */
+#include <stdio.h>
+#include <stdlib.h>
+#define NUM 40
+void fillarray(double ar [], int n);
+void showarray(const double ar [], int n);
+int mycomp(const void * p1, const void * p2);
+int main(void)
+{
+double vals[NUM];
+fillarray(vals, NUM);
+puts("Random list:");
+showarray(vals, NUM);
+qsort(vals, NUM, sizeof(double), mycomp);
+puts("\nSorted list:");
+showarray(vals, NUM);
+return 0;
+}
+void fillarray(double ar [], int n)
+{
+int index;
+for (index = 0; index < n; index++)
+ar[index] = (double) rand() / ((double) rand() + 0.1);
+}
+void showarray(const double ar [], int n)
+{
+int index;
+for (index = 0; index < n; index++)
+{
+printf("%9.4f ", ar[index]);
+if (index % 6 == 5)
+putchar('\n');
+}
+if (index % 6 != 0)
+putchar('\n');
+}
+/* 按从小到大的顺序排序 */
+int mycomp(const void * p1, const void * p2)
+{
+/* 要使用指向double的指针来访问这两个值 */
+const double * a1 = (const double *) p1;
+const double * a2 = (const double *) p2;
+if (*a1 < *a2)
+return -1;
+else if (*a1 == *a2)
+return 0;
+else
+return 1;
+}
+```
+
+qsort()函数把两个待比较元素的地址传递给比较函数。在该程序中，把 待比较的两个double类型值的地址赋给p1和p2。注意，qsort()的第1个参数引 用整个数组，比较函数中的两个参数引用数组中的两个元素。这里存在一个 问题。为了比较指针所指向的值，必须解引用指针。因为值是 double 类 型，所以要把指针解引用为 double 类型的值。然而，qsort()要求指针指向void。要解决这个问题，必须在比较函数的内部声明两个类型正确的指针， 并初始化它们分别指向作为参数传入的值：
+```C
+/* 按从小到大的顺序排序值 */
+int mycomp(const void * p1, const void * p2)
+{
+/* 使用指向double类型的指针访问值 */
+const double * a1 = (const double *) p1;
+const double * a2 = (const double *) p2;
+if (*a1 < *a2)
+return -1;
+else if (*a1 == *a2)
+return 0;
+else
+return 1;
+}
+```
+
+简而言之，为了让该方法具有通用性，qsort()和比较函数使用了指向 void 的指针。因此，必须把数组中每个元素的大小明确告诉qsort()，并且在 比较函数的定义中，必须把该函数的指针参数转换为对具体应用而言类型正 确的指针。
+
+*注意C和C++中的void\**
+
+C和C++对待指向void的指针有所不同。在这两种语言中，都可以把任 何类型的指针赋给void类型的指针。例如，程序清单16.17中，qsort()的函数 调用中把double*指针赋给void*指针。但是，C++要求在把void*指针赋给任 何类型的指针时必须进行强制类型转换。而C没有这样的要求
+
+-------------------------
+
+## 断言库
+
+assert.h 头文件支持的断言库是一个用于辅助调试程序的小型库。它由 assert()宏组成，接受一个整型表达式作为参数。如果表达式求值为假（非 零），assert()宏就在标准错误流（stderr）中写入一条错误信息，并调用 abort()函数终止程序（abort()函数的原型在stdlib.h头文件中）。assert()宏是 为了标识出程序中某些条件为真的关键位置，如果其中的一个具体条件为 假，就用 assert()语句终止程序。通常，assert()的参数是一个条件表达式或 逻辑表达式。如果 assert()中止了程序，它首先会显示失败的测试、包含测 试的文件名和行号。
+
+**assert的用法**
+
+在求平方根之前，该程 序断言z是否大于或等于0。程序还错误地减去一个值而不是加上一个值，故 意让z得到不合适的值。
+```C
+/* assert.c -- 使用 assert() */
+#include <stdio.h>
+#include <math.h>
+#include <assert.h>
+int main()
+{
+double x, y, z;
+puts("Enter a pair of numbers (0 0 to quit): ");
+while (scanf("%lf%lf", &x, &y) == 2
+&& (x != 0 || y != 0))
+{
+z = x * x - y * y; /* 应该用 + */
+assert(z >= 0);
+printf("answer is %f\n", sqrt(z));
+puts("Next pair of numbers: ");
+}
+puts("Done");
+return 0;
+}
+```
+使用 assert()有几个好处：它不仅能自动标识文件和出问题的行 号，还有一种无需更改代码就能开启或关闭 assert()的机制。如果认为已经 排除了程序的 bug，就可以把下面的宏定义写在包含assert.h的位置前面：
+```C
+#define NDEBUG
+```
+并重新编译程序，这样编译器就会禁用文件中的所有 assert()语句。如 果程序又出现问题，可以移除这条#define指令（或者把它注释掉），然后重 新编译程序，这样就重新启用了assert()语句。
+
+**_Static_assert(C11)**
+
+_Static_assert声明，可以在编译时检查assert()表达式。因此，assert()可以导 致正在运行的程序中止，而_Static_assert()可以导致程序无法通过编译。 _Static_assert()接受两个参数。第1个参数是整型常量表达式，第2个参数是一个字符串。如果第 1 个表达式求值为 0（或_False），编译器会显示字符 串，而且不编译该程序。
+```C
+//　statasrt.c
+#include <stdio.h>
+#include <limits.h>
+_Static_assert(CHAR_BIT == 16, "16-bit char falsely assumed");
+int main(void)
+{
+puts("char is 16 bits.");
+return 0;
+}
+```
+根据语法，_Static_assert()被视为声明。因此，它可以出现在函数中， 或者在这种情况下出现在函数的外部
+
+_Static_assert要求它的第1个参数是整型常量表达式，这保证了能在编 译期求值（sizeof表达式被视为整型常量）。不能用程序清单16.18中的assert 代替_Static_assert，因为assert中作为测试表达式的z > 0不是常量表达式，要 到程序运行时才求值。当然，可以在程序清单16.19的main()函数中使用 assert(CHAR_BIT == 16)，但这会在编译和运行程序后才生成一条错误信 息，很没效率。
+
+----------------------
+## string.h库中的memcpy()和memmove()
+
+不能把一个数组赋给另一个数组，所以要通过循环把数组中的每个元素 赋给另一个数组相应的元素。有一个例外的情况是：使用strcpy()和strncpy() 函数来处理字符数组。memcpy()和memmove()函数提供类似的方法处理任意 类型的数组。下面是这两个函数的原型:
+```C
+void *memcpy(void * restrict s1, const void * restrict s2, size_t n);
+void *memmove(void *s1, const void *s2, size_t n);
+```
+这两个函数都从 s2 指向的位置拷贝 n 字节到 s1 指向的位置，而且都返 回 s1 的值。所不同的是， memcpy()的参数带关键字restrict，即memcpy()假 设两个内存区域之间没有重叠；而memmove()不作这样的假设，所以拷贝过 程类似于先把所有字节拷贝到一个临时缓冲区，然后再拷贝到最终目的地。 如果使用 memcpy()时，两区域出现重叠会怎样？其行为是未定义的，这意 味着该函数可能正常工作，也可能失败。编译器不会在本不该使用 memcpy()时禁止你使用，作为程序员，在使用该函数时有责任确保两个区域 不重叠。
+
+由于这两个函数设计用于处理任何数据类型，所有它们的参数都是两个 指向 void 的指针。C 允许把任何类型的指针赋给void *类型的指针。如此宽 容导致函数无法知道待拷贝数据的类型。因此，这两个函数使用第 3 个参数 指明待拷贝的字节数。注意，对数组而言，字节数一般与元素个数不同。如 果要拷贝数组中10个double类型的元素，要使用10*sizeof(double)，而不是 10。
+
+该程序假设double类型是int 类型的两倍大小。另外，该程序还使用了C11的_Static_assert特性测试断言。
+```C
+// mems.c -- 使用 memcpy() 和 memmove()
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#define SIZE 10
+void show_array(const int ar [], int n);
+// 如果编译器不支持C11的_Static_assert，可以注释掉下面这行
+_Static_assert(sizeof(double) == 2 * sizeof(int), "double not twice int size");
+int main()
+{
+int values[SIZE] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+int target[SIZE];
+double curious[SIZE / 2] = { 2.0, 2.0e5, 2.0e10, 2.0e20, 5.0e30 };
+puts("memcpy() used:");
+puts("values (original data): ");
+show_array(values, SIZE);
+memcpy(target, values, SIZE * sizeof(int));
+puts("target (copy of values):");
+show_array(target, SIZE);
+puts("\nUsing memmove() with overlapping ranges:");
+memmove(values + 2, values, 5 * sizeof(int));
+puts("values -- elements 0-4 copied to 2-6:");
+show_array(values, SIZE);
+puts("\nUsing memcpy() to copy double to int:");
+memcpy(target, curious, (SIZE / 2) * sizeof(double));
+puts("target -- 5 doubles into 10 int positions:");
+show_array(target, SIZE / 2);
+show_array(target + 5, SIZE / 2);
+return 0;
+}
+void show_array(const int ar [], int n)
+{
+int i;
+for (i = 0; i < n; i++)
+printf("%d ", ar[i]);
+putchar('\n');
+}
+```
+
+程序中最后一次调用 memcpy()从 double 类型数组中把数据拷贝到 int 类 型数组中，这演示了memcpy()函数不知道也不关心数据的类型，它只负责从 一个位置把一些字节拷贝到另一个位置（例如，从结构中拷贝数据到字符数 组中）。而且，拷贝过程中也不会进行数据转换。如果用循环对数组中的每 个元素赋值，double类型的值会在赋值过程被转换为int类型的值。这种情况 下，按原样拷贝字节，然后程序把这些位组合解释成int类型。
+
+-----------------------------
+## 可变参数：stdarg.h
+
+本章前面提到过变参宏，即该宏可以接受可变数量的参数。stdarg.h 头 文件为函数提供了一个类似的功能，但是用法比较复杂。必须按如下步骤进 行：
+
+1. 提供一个使用省略号的函数原型；
+2. 在函数定义中创建一个va_list类型的变量；
+3. 用宏把该变量初始化为一个参数列表；
+4. 用宏访问参数列表；
+5. 用宏完成清理工作。
+
+接下来详细分析这些步骤。这种函数的原型应该有一个形参列表，其中 至少有一个形参和一个省略号：
+```C
+void f1(int n, ...);　　　　　　　　// 有效
+int f2(const char * s, int k, ...); // 有效
+char f3(char c1, ..., char c2);// 无效，省略号不在最后
+double f3(...);　　　　　　　　　　 // 无效，没有形参
+```
+
+最右边的形参（即省略号的前一个形参）起着特殊的作用，标准中用 parmN这个术语来描述该形参。在上面的例子中，第1行f1()中parmN为n，第 2行f2()中parmN为k。传递给该形参的实际参数是省略号部分代表的参数数 量。例如，可以这样使用前面声明的f1()函数：
+```C
+f1(2, 200, 400);　　　　　 // 2个额外的参数
+f1(4, 13, 117, 18, 23);　　// 4个额外的参数
+```
+接下来，声明在stdarg.h中的va_list类型代表一种用于储存形参对应的形 参列表中省略号部分的数据对象。变参函数的定义起始部分类似下面这样：
+```C
+double sum(int lim,...)
+{
+va_list ap;　 //声明一个储存参数的对象
+```
+在该例中，lim是parmN形参，它表明变参列表中参数的数量。
+
+然后，该函数将使用定义在stdarg.h中的va_start()宏，把参数列表拷贝到 va_list类型的变量中。该宏有两个参数：va_list类型的变量和parmN形参。 接着上面的例子讨论，va_list类型的变量是ap，parmN形参是lim。所以，应 这样调用它：
+
+```C
+va_start(ap, lim); // 把ap初始化为参数列表
+```
+
+下一步是访问参数列表的内容，这涉及使用另一个宏va_arg()。该宏接 受两个参数：一个va_list类型的变量和一个类型名。第1次调用va_arg()时， 它返回参数列表的第1项；第2次调用时返回第2项，以此类推。表示类型的 参数指定了返回值的类型。例如，如果参数列表中的第1个参数是double类 型，第2个参数是int类型，可以这样做：
+```C
+double tic;
+int toc;
+...
+tic = va_arg(ap, double);　// 检索第1个参数
+toc = va_arg(ap, int);　　 //检索第2个参数
+```
+注意，传入的参数类型必须与宏参数的类型相匹配。如果第1个参数是10.0，上面tic那行代码可以正常工作。但是如果参数是10，这行代码可能会 出错。这里不会像赋值那样把double类型自动转换成int类型。
+
+最后，要使用va_end()宏完成清理工作。例如，释放动态分配用于储存 参数的内存。该宏接受一个va_list类型的变量：
+```C
+va_end(ap); // 清理工作
+```
+
+调用va_end(ap)后，只有用va_start重新初始化ap后，才能使用变量ap。
+
+因为va_arg()不提供退回之前参数的方法，所以有必要保存va_list类型 变量的副本。C99新增了一个宏用于处理这种情况：va_copy()。该宏接受两 个va_list类型的变量作为参数，它把第2个参数拷贝给第1个参数：
+```C
+va_list ap;
+va_list apcopy;
+
+double tic;
+int toc;
+...
+va_start(ap, lim);　　　　 // 把ap初始化为一个参数列表
+va_copy(apcopy, ap);　　　 // 把apcopy作为ap的副本
+tic = va_arg(ap, double);　// 检索第1个参数
+toc = va_arg(ap, int);　　 // 检索第2个参数
+```
+
+```C
+//varargs.c -- use variable number of arguments
+#include <stdio.h>
+#include <stdarg.h>
+double sum(int, ...);
+int main(void)
+{
+double s, t;
+s = sum(3, 1.1, 2.5, 13.3);
+t = sum(6, 1.1, 2.1, 13.1, 4.1, 5.1, 6.1);
+printf("return value for "
+"sum(3, 1.1, 2.5, 13.3):　　　　　　　%g\n", s);
+printf("return value for "
+"sum(6, 1.1, 2.1, 13.1, 4.1, 5.1, 6.1): %g\n", t);
+return 0;
+}
+double sum(int lim, ...)
+{
+va_list ap;　　　　　　　　　　 // 声明一个对象储存参数
+double tot = 0;
+int i;
+va_start(ap, lim);　　　　 // 把ap初始化为参数列表
+for (i = 0; i < lim; i++)
+tot += va_arg(ap, double); // 访问参数列表中的每一项
+va_end(ap);　　　　　　　　　　 // 清理工作
+return tot;
+}
+```
+总而言之，使用变参函数比使用变参宏更复杂，但是函数的应用范围更广。
+
