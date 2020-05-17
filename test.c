@@ -1,7 +1,11 @@
-#include<stdio.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-int main(int argc, char *argv[])
+char * const *(*next)();
+
+int main(void)
 {
-    printf("hello world\n");
-    return 0;
+    int *x;
 }
