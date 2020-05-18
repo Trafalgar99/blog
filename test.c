@@ -7,5 +7,8 @@ char * const *(*next)();
 
 int main(void)
 {
-    int *x;
+    int arr[3];
+    extern int a[];
+    
+    char *p="sdfsd";
 }
