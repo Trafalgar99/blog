@@ -1,9 +1,16 @@
-#include<iostream>
+#include <cctype>
+#include <iostream>
+#include <string>
+#include<vector>
 
-struct Foo{};
+using namespace std;
 
 int main(void)
 {
-    const char *str = "dsfds";
-    return 0;
+    vector<vector<int>> v;
+    string s("Hello world!!");
+    for (auto &c: s)
+        c = toupper(c);
+
+    cout<<s<<endl;
 }
