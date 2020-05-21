@@ -1,16 +1,24 @@
-#include <cctype>
-#include <iostream>
-#include <string>
+#include<iostream>
 #include<vector>
-
+#include<string>
 using namespace std;
 
 int main(void)
 {
-    vector<vector<int>> v;
-    string s("Hello world!!");
-    for (auto &c: s)
-        c = toupper(c);
+    string sought;
+    vector<string> text;
+    auto beg = text.begin(), end = text.end();
+    auto mid = text.begin() + (end-beg)/2;
+    while (mid != end && *mid !=sought)
+    {
+        if (sought < *mid)
+            end = mid;
+        else
+            beg = mid + 1;
 
-    cout<<s<<endl;
+        mid = beg + (end - beg) /2;
+    
+    }
+
+    return 0;
 }
