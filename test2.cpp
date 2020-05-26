@@ -15,3 +15,12 @@ int main(void)
 
     return 0;
 }
+
+
+class a
+{
+public:
+    a(int n) : num(n) {}
+
+    int num;
+};
