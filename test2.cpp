@@ -2,9 +2,23 @@
 #include <string>
 #include <vector>
 
+
+class Window_mgr
+{
+public:
+    // 窗口中每个屏幕的编号
+    using ScreenIndex = std::vector<Screen>::size_type;
+    void clear(ScreenIndex);
+
+private:
+    std::vector<Screen> screens{Screen(24, 80, ' ')};
+};
+
+
 class Screen
 {
 public:
+    friend void Window_mgr::clear(ScreenIndex);
     typedef std::string::size_type pos;
     Screen() = default;
 
@@ -38,16 +52,7 @@ private:
     }
 };
 
-void Screen::some_member() const
-{
-    ++access_ctr; // 保存一个计数值，用于记录成员函数被调用的次数
-}
 
-class Window_mgr
-{
-private:
-    std::vector<Screen> screens{Screen(24, 80, ' ')};
-};
 
 inline Screen &Screen::set(char c)
 {
@@ -60,3 +65,17 @@ inline Screen &Screen::set(pos r, pos col, char ch)
     contents[r * width + col] = ch;
     return *this;
 }
+
+void Screen::some_member() const
+{
+    ++access_ctr; // 保存一个计数值，用于记录成员函数被调用的次数
+}
+
+void Window_mgr::clear(ScreenIndex i)
+{
+    //s是一个Screen的引用，指向我们想清空的那个屏幕
+    Screen &s = screens[i];
+    //将那个选定的Screen 重置为空白
+    s.contents = std::string(s.height * s.width, ' ');
+}
+
