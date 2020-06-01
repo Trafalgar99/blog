@@ -9,6 +9,8 @@ public:
     // 窗口中每个屏幕的编号
     using ScreenIndex = std::vector<Screen>::size_type;
     void clear(ScreenIndex);
+    //向窗口添加一个Screen，返回他的编号
+    ScreenIndex addScreen(const Screen&);
 
 private:
     std::vector<Screen> screens{Screen(24, 80, ' ')};
@@ -40,6 +42,7 @@ public:
         do_display(os);
         return *this;
     }
+    pos size()const;
 
 private:
     pos cursor = 0;
@@ -79,3 +82,12 @@ void Window_mgr::clear(ScreenIndex i)
     s.contents = std::string(s.height * s.width, ' ');
 }
 
+Window_mgr::ScreenIndex Window_mgr::addScreen(const Screen &s)
+{
+    screens.push_back(s);
+    return screens.size()-1;
+}
+
+Screen::pos Screen::size()const{
+    return height * width;
+}

@@ -10,6 +10,8 @@ class Sales_data
 
 public:
     Sales_data() = default;
+    Sales_data(std::string s = ""):bookNo(s){}
+    
     Sales_data(const std::string &s) : bookNo(s) {}
     Sales_data(const std::string &s, unsigned n, double p) : bookNo(s), units_sold(n), revenue(p * n) {}
     Sales_data(std::istream &);
