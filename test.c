@@ -10,7 +10,7 @@ int (*func2(int r))[10];
 
 int main(void)
 {
-    
+   printf("hello world"); 
 
     return 0;
 }
