@@ -29,7 +29,7 @@
 在 Linux 系统中创建每个用户时，将自动创建一个与其同名的基本用户组，而且 这个基本用户组只有该用户一个人。如果该用户以后被归纳入其他用户组，则这个其他用户 组称之为扩展用户组。一个用户只有一个基本用户组，但是可以有多个扩展用户组，从而满 足日常的工作需要
 
 **useradd**
-> useradd 命令用于创建新的用户，格式为“useradd [选项] 用户名”
+> useradd 命令用于创建新的用户，格式为“useradd \[选项\] 用户名”
 
 可以使用 useradd 命令创建用户账户。使用该命令创建用户账户时，默认的用户家目录会 被存放在/home 目录中，默认的 Shell 解释器为/bin/bash，而且默认会创建一个与该用户同名 的基本用户组
 
@@ -148,6 +148,7 @@ linux中的文件类型：
 
 
 **SGID**
+
 > SGID 主要实现如下两种功能： 
 > 
 > + 让执行者临时拥有属组的权限（对拥有执行权限的二进制程序进行设置）； 
@@ -156,7 +157,13 @@ linux中的文件类型：
 每个文件都有其归属的所有者和所属组，当创建或传送一个文件后，这个文 件就会自动归属于执行这个操作的用户（即该用户是文件的所有者）。如果现在需要在一个部 门内设置共享目录，让部门内的所有人员都能够读取目录中的内容，那么就可以创建部门共 享目录后，在该目录上设置 SGID 特殊权限位。这样，部门内的任何人员在里面创建的任何文 件都会归属于该目录的所属组，而不再是自己的基本用户组。此时，我们用到的就是 SGID 的 第二个功能，即在某个目录中创建的文件自动继承该目录的用户组（只可以对目录进行设置）。
 
 ```shell
-[root@linuxprobe ~]# cd /tmp [root@linuxprobe tmp]# mkdir testdir [root@linuxprobe tmp]# ls -ald testdir/ drwxr-xr-x. 2 root root 6 Feb 11 11:50 testdir/ [root@linuxprobe tmp]# chmod -Rf 777 testdir/ [root@linuxprobe tmp]# chmod -Rf g+s testdir/ [root@linuxprobe tmp]# ls -ald testdir/ drwxrwsrwx. 2 root root 6 Feb 11 11:50 testdir/ 
+[root@linuxprobe ~]# cd /tmp 
+[root@linuxprobe tmp]# mkdir testdir 
+[root@linuxprobe tmp]# ls -ald testdir/ drwxr-xr-x. 2 root root 6 Feb 11 11:50 testdir/ 
+[root@linuxprobe tmp]# chmod -Rf 777 testdir/ 
+[root@linuxprobe tmp]# chmod -Rf g+s testdir/ 
+[root@linuxprobe tmp]# ls -ald testdir/ 
+drwxrwsrwx. 2 root root 6 Feb 11 11:50 testdir/ 
 在使用上述命令设置好目录的 777 权限（确保普通用户可以向其中写入文件），并为该目 录设置了 SGID 特殊权限位后，就可以切换至一个普通用户，然后尝试在该目录中创建文件， 并查看新创建的文件是否会继承新创建的文件所在的目录的所属组名称： 
 [root@linuxprobe tmp]# su - linuxprobe Last login: Wed Feb 11 11:49:16 CST 2017 on pts/0 [linuxprobe@linuxprobe ~]$ cd /tmp/testdir/ [linuxprobe@linuxprobe testdir]$ echo "linuxprobe.com" > test [linuxprobe@linuxprobe testdir]$ ls -al test -rw-rw-r--. 1 linuxprobe root 15 Feb 11 11:50 test 
 ```
