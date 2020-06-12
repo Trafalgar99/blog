@@ -2,6 +2,7 @@
     "files.associations": {
         "*.m": "objective-c",
         "iostream": "cpp",
-        "istream": "cpp"
+        "istream": "cpp",
+        "iterator": "cpp"
     }
 }
