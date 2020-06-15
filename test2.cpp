@@ -4,6 +4,7 @@
 #include <cctype>
 #include <iterator>
 #include <cstddef>
+#include <initializer_list>
 
 using namespace std;
 void test1()
@@ -18,6 +19,7 @@ void test1()
     std::cout << rd2 << std::endl;
 }
 int tr = 89;
+void err(initializer_list<string> li);
 
 int main(int argc, char **argv)
 {
@@ -59,6 +61,40 @@ int main(int argc, char **argv)
     // int (*re)[3] = arr;
 
     //
+    // vector<int> v = {1, 2, 3, 4, 5};
+    // for (auto a : v)
+    // {
+    //     v.push_back(a * 2);
+    // }
+    // cout << endl;
+    // for (const auto a : v)
+    // {
+    //     cout << a << endl;
+    // }
+
+    //
+    // int arr[]{1,3,4,5};
+    // decltype(arr) b;
 
     return 0;
 }
+
+// void a(int arr[][10]);
+// void err(initializer_list<string> li){
+//     for(auto a = li.begin();a!=li.end();++a)
+//     {
+//         cout<<*a<<endl;
+//     }
+//     cout<<endl;
+// }
+// auto func(int) -> int (*)[];
+
+// string s[10];
+
+// string(&func())[10];
+// auto func() -> string (&)[10];
+// decltype(s)& func();
+// using x = string (&)[10];
+// x func();
+// typedef string (&xx)[10];
+// xx func();
