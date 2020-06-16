@@ -76,6 +76,9 @@ int main(int argc, char **argv)
     // int arr[]{1,3,4,5};
     // decltype(arr) b;
 
+    // int a = 4.5;
+    // int b{4.5};
+
     return 0;
 }
 
@@ -98,3 +101,16 @@ int main(int argc, char **argv)
 // x func();
 // typedef string (&xx)[10];
 // xx func();
+
+constexpr int a(int a) { return 67; }
+
+// int a(int c,int b){
+//     ;
+// }
+// int a(double a,double b){
+//     ;
+// }
+// void test(){
+
+//     a(45,5.6);
+// }
